@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>雲端資源規劃與金融平台架構</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        /* --- 1. 核心變數定義 (科技霓虹配色) --- */
+        :root {
+            --bg-dark: #0a0a12; /* 深邃太空黑 */
+            --panel-bg: rgba(16, 24, 48, 0.8); /* 半透明面板 */
+            --neon-cyan: #00f3ff; /* 青色霓虹 */
+            --neon-blue: #0066ff; /* 藍色霓虹 */
+            --neon-pink: #ff00ff; /* 粉色霓虹 */
+            --text-glow: 0 0 10px rgba(0, 243, 255, 0.5); /* 文字發光 */
+            --border-glow: 0 0 15px rgba(0, 102, 255, 0.6); /* 邊框發光 */
+        }
+
+        /* --- 2. 全局樣式與背景 --- */
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-dark);
+            /* 科技感背景紋理 (網格 + 掃描線) */
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+                radial-gradient(circle at 50% 50%, rgba(0, 102, 255, 0.15), transparent 70%);
+            background-size: 30px 30px, 30px 30px, 100% 100%;
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- 3. 標題區 (Header) --- */
+        header {
+            text-align: center; padding: 60px 20px 40px;
+            position: relative;
+            border-bottom: 2px solid var(--neon-blue);
+            box-shadow: 0 5px 20px rgba(0, 102, 255, 0.3);
+        }
+        /* 標題下方的掃描光條動畫 */
+        header::after {
+            content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+            animation: scanline 3s linear infinite;
+        }
+        header h1 {
+            margin: 0; font-family: 'Orbitron', sans-serif; font-size: 2.5rem;
+            text-transform: uppercase; letter-spacing: 4px;
+            color: var(--neon-cyan); text-shadow: var(--text-glow);
+            /* 新增：讓 Logo 與文字垂直置中對齊 */
+            display: flex; align-items: center; justify-content: center;
+        }
+        /* 新增：Logo 樣式 */
+        .header-logo {
+            height: 1.2em; /* 高度跟著文字大小跑 */
+            width: auto;
+            margin-right: 15px; /* 與右邊文字的距離 */
+            vertical-align: middle;
+        }
+
+        header p { opacity: 0.8; margin-top: 15px; font-size: 1.1rem; color: #aabbee; }
+
+        /* --- 4. 主要內容區 (2x2 Grid 佈局) --- */
+        .main-grid {
+            max-width: 1400px; margin: 40px auto; padding: 0 20px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 兩欄 */
+            gap: 30px; /* 間距 */
+        }
+
+        /* 每一組的容器面板 */
+        .group-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--neon-blue);
+            border-radius: 12px; overflow: hidden;
+            box-shadow: var(--border-glow), inset 0 0 20px rgba(0, 102, 255, 0.2);
+            position: relative;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .group-panel:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.5), inset 0 0 30px rgba(0, 243, 255, 0.3);
+            border-color: var(--neon-cyan);
+        }
+        
+        /* 組別標題 */
+        .group-title {
+            padding: 15px; text-align: center; font-family: 'Orbitron', sans-serif;
+            background: rgba(0, 102, 255, 0.2); color: var(--neon-cyan);
+            border-bottom: 1px solid var(--neon-blue);
+        }
+
+        /* 照片容器 (處理 Google Drive 圖片大小的關鍵) */
+        .photo-container {
+            position: relative; width: 100%;
+            /* 設定一個固定的寬高比，例如 4:3，確保排版整齊 */
+            aspect-ratio: 4 / 3; 
+            background: #000; overflow: hidden;
+        }
+        /* Google Drive 圖片樣式 */
+        .group-photo {
+            width: 100%; height: 100%; 
+            object-fit: cover; /* 關鍵：填滿容器且不變形 */
+            opacity: 0.9; transition: all 0.5s;
+            filter: contrast(1.1) saturate(1.1); /* 增加一點科技感濾鏡 */
+        }
+        .group-panel:hover .group-photo { opacity: 1; transform: scale(1.05); }
+        /* 照片上的掃描線覆蓋層 */
+        .photo-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(transparent 0px, transparent 2px, rgba(0, 243, 255, 0.1) 3px);
+            pointer-events: none; /* 不擋住點擊 */
+        }
+
+
+        /* --- 5. 互動標籤 (Tag) - 高對比度優化版 (字體放大版) --- */
+        .name-tag {
+            position: absolute; transform: translate(-50%, -50%);
+            /* 修改：稍微加大內距 */
+            padding: 6px 14px;
+            /* 修改：加大字體 (原本 12px -> 15px) */
+            font-size: 15px;
+            font-weight: 700; font-family: 'Orbitron', sans-serif;
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            white-space: nowrap;
+            /* 科技感切割 */
+            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+            /* 加入文字黑色陰影，確保在亮處也看得見 */
+            text-shadow: 0 0 3px rgba(0,0,0,1);
+            z-index: 5;
+        }
+
+        /* 狀態：未寫 (深底青字，強烈閃爍) */
+        .tag-empty {
+            /* 深色背景，確保文字清晰 */
+            background: rgba(2, 12, 26, 0.9); 
+            color: var(--neon-cyan);
+            /* 加粗邊框 */
+            border: 1px solid var(--neon-cyan);
+            /* 基礎發光 */
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.4), inset 0 0 5px rgba(0, 243, 255, 0.2);
+            animation: pulseTag 2s infinite alternate;
+        }
+        .tag-empty:hover { 
+            background: var(--neon-cyan); 
+            color: #000; /* 背景亮時文字變黑 */
+            text-shadow: none;
+            box-shadow: 0 0 20px var(--neon-cyan); 
+            transform: translate(-50%, -60%) scale(1.1);
+            z-index: 15; 
+        }
+
+        /* 狀態：已寫 (深底粉字，恆亮發光) */
+        .tag-filled {
+            background: rgba(26, 2, 20, 0.9); 
+            color: var(--neon-pink);
+            border: 1px solid var(--neon-pink);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5), inset 0 0 5px rgba(255, 0, 255, 0.3);
+        }
+        .tag-filled::before { content: '◈ '; color: var(--neon-pink); }
+        .tag-filled:hover { 
+            background: var(--neon-pink); 
+            color: #fff; 
+            text-shadow: 0 0 5px rgba(0,0,0,0.5);
+            transform: translate(-50%, -60%) scale(1.15); 
+            z-index: 15; 
+            box-shadow: 0 0 30px var(--neon-pink); 
+        }
+
+
+        /* --- 6. Modal 視窗 (科技面板風格) --- */
+        .modal {
+            display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 10, 20, 0.9); /* 深色背景 */
+            backdrop-filter: blur(8px); /* 強力模糊 */
+            align-items: center; justify-content: center;
+        }
+        .modal.show { display: flex; animation: holoPop 0.4s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+        .modal-content {
+            background: linear-gradient(135deg, rgba(16, 24, 48, 0.95), rgba(0, 0, 0, 0.95));
+            width: 90%; max-width: 600px;
+            border: 2px solid var(--neon-blue); border-radius: 15px;
+            box-shadow: 0 0 50px rgba(0, 102, 255, 0.4), inset 0 0 20px rgba(0, 102, 255, 0.2);
+            position: relative; max-height: 90vh; display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        /* Modal 頂部的裝飾條 */
+        .modal-header-bar { height: 5px; background: linear-gradient(90deg, var(--neon-cyan), var(--neon-pink)); width: 100%; }
+
+        .close-btn {
+            position: absolute; top: 15px; right: 20px; font-size: 30px; color: var(--neon-blue);
+            cursor: pointer; z-index: 10; transition: 0.3s; text-shadow: 0 0 5px var(--neon-blue);
+        }
+        .close-btn:hover { color: var(--neon-cyan); transform: rotate(90deg); }
+
+        /* View Modal UI */
+        .view-img-wrap { width: 100%; height: 350px; background: rgba(0,0,0,0.5); flex-shrink: 0; border-bottom: 1px solid var(--neon-blue); }
+        .view-img-wrap img { width: 100%; height: 100%; object-fit: contain; }
+        .view-info { padding: 30px; overflow-y: auto; color: #aabbee; }
+        .view-msg { font-size: 1.15rem; line-height: 1.8; white-space: pre-wrap; font-style: italic; text-shadow: 0 0 2px rgba(0, 102, 255, 0.5); }
+        .view-author { text-align: right; color: var(--neon-cyan); font-family: 'Orbitron', sans-serif; margin-top: 20px; font-size: 1.2rem; }
+
+        /* Write Modal UI (表單) */
+        .form-body { padding: 40px; overflow-y: auto; color: #fff; }
+        .form-title { text-align: center; color: var(--neon-cyan); margin-top: 0; font-family: 'Orbitron', sans-serif; text-transform: uppercase; }
+        .form-group { margin-bottom: 25px; }
+        label { display: block; margin-bottom: 10px; color: var(--neon-blue); font-family: 'Orbitron', sans-serif; font-size: 0.9rem; }
+        /* 科技感輸入框 */
+        input, textarea {
+            width: 100%; padding: 15px;
+            background: rgba(0, 20, 40, 0.8);
+            border: 1px solid var(--neon-blue); border-radius: 5px;
+            color: var(--neon-cyan); font-family: 'Noto Sans TC', sans-serif;
+            box-sizing: border-box; transition: 0.3s;
+        }
+        input:focus, textarea:focus {
+            outline: none; border-color: var(--neon-cyan);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+            background: rgba(0, 30, 60, 0.9);
+        }
+        /* 科技感按鈕 */
+        .btn-submit {
+            width: 100%; padding: 15px;
+            background: linear-gradient(90deg, var(--neon-blue), var(--neon-cyan));
+            color: #000; border: none; border-radius: 5px;
+            cursor: pointer; font-size: 1.1rem; font-weight: bold; font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase; letter-spacing: 2px;
+            transition: 0.3s; position: relative; overflow: hidden;
+        }
+        .btn-submit:hover {
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.6); color: #fff;
+        }
+        .btn-submit:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none;}
+
+
+        /* --- 7. 動畫定義 --- */
+        @keyframes scanline { 0% { left: -100%; } 100% { left: 100%; } }
+        
+        /* 新增：更強烈的呼吸燈動畫 */
+        @keyframes pulseTag {
+            0% {
+                box-shadow: 0 0 10px rgba(0, 243, 255, 0.4), inset 0 0 5px rgba(0, 243, 255, 0.2);
+                border-color: rgba(0, 243, 255, 0.6);
+            }
+            100% {
+                box-shadow: 0 0 20px rgba(0, 243, 255, 0.8), inset 0 0 10px rgba(0, 243, 255, 0.4);
+                border-color: var(--neon-cyan);
+            }
+        }
+        
+        @keyframes holoPop { 0% { opacity: 0; transform: scale(0.8) translateY(20px); filter: blur(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } }
+
+        /* --- 8. RWD 響應式 (手機版變單欄) --- */
+        @media (max-width: 768px) {
+            header h1 { font-size: 1.8rem; }
+            .main-grid { grid-template-columns: 1fr; gap: 40px; } /* 手機版變一欄垂直排列 */
+            .view-img-wrap { height: 250px; }
+            .group-panel { margin-bottom: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>
+        NTPU金融創新AI專班2025
+    </h1>
+    <p>感謝宋博士的專業指引與游經理的悉心教導，這面牆集結了大家的祝福!</p>
+</header>
+
+<div class="main-grid" id="mainStage">
+    <div style="grid-column: 1 / -1; text-align:center; padding:50px; color:var(--neon-cyan); font-family:'Orbitron'">
+        [SYSTEM] Initializing Data Stream...
+    </div>
+</div>
+
+
+<div id="writeModal" class="modal">
+    <div class="modal-content form-body">
+        <div class="modal-header-bar"></div>
+        <span class="close-btn" onclick="closeModal('writeModal')">+</span>
+        <h2 class="form-title">// UPLOAD MESSAGE //</h2>
+        <p style="text-align:center; color:#aabbee; margin-bottom:30px;">
+            Target ID: <span id="writeNameDisplay" style="color:var(--neon-pink); font-weight:bold; font-family:'Orbitron'"></span>
+        </p>
+        <input type="hidden" id="inputName">
+        
+        <div class="form-group">
+            <label>[上傳圖片 (選填)]</label>
+            <input type="file" id="inputFile" accept="image/*" style="padding: 10px; background: rgba(0,243,255,0.1);">
+        </div>
+        <div class="form-group">
+            <label>[DATA TYPE: TEXT]</label>
+            <textarea id="inputMsg" rows="5" placeholder="Enter your transmission here..."></textarea>
+        </div>
+        <button class="btn-submit" id="btnSubmit" onclick="submitData()">TRANSMIT DATA</button>
+        <p id="statusMsg" style="text-align:center; color:var(--neon-cyan); margin-top:15px; font-family:'Orbitron'"></p>
+    </div>
+</div>
+
+<div id="viewModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header-bar"></div>
+        <span class="close-btn" onclick="closeModal('viewModal')">+</span>
+        <div class="view-img-wrap">
+            <img id="viewImg" src="">
+        </div>
+        <div class="view-info">
+            <div id="viewMsg" class="view-msg"></div>
+            <div id="viewAuthor" class="view-author"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ==========================================
+    // ⚙️ SYSTEM CONFIGURATION (核心設定區)
+    // ==========================================
+    
+    // 1. Google Apps Script 網址
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwpntGmGZ2Xk3imhL7wMrSSAXDSIEKDHQINgvVihpNYOj8ZhXAScrudfc3Y6X5dCnl4/exec"; 
+
+    // 2. 預設的「感謝圖」網址 (當沒上傳圖片時顯示這張)
+    // 這是一張霓虹燈風格的 "Thank You" 圖片，非常符合你的網頁風格
+    const DEFAULT_THANK_YOU_IMG = "https://drive.google.com/thumbnail?id=1DwqTr8P4u1EhnrBJhOEEVhxYn7Se00AO&sz=w1000";
+
+    // 3. 四組資料設定
+    const GROUPS_CONFIG = [
+        {
+            id: "group1", title: "快樂雲端好夥伴一",
+            photoUrl: "https://drive.google.com/thumbnail?id=1iCOrs_4WHAd1RseBSEfSNi0ORJ9TQYDH&sz=w1000", 
+            students: [
+                { name: "潘雪甄", x: 20, y: 41.80 },
+                { name: "蔡堡丞", x: 26, y: 31.94 },
+                { name: "謝宛錡", x: 40.30, y: 34.60 },
+                { name: "江芸帆", x: 60.60, y: 33.93 },
+                { name: "黃聖剛", x: 73.60, y: 30.47 },
+            ]
+        },
+        {
+            id: "group2", title: "快樂雲端好夥伴二",
+            photoUrl: "https://drive.google.com/thumbnail?id=1oaKhjuXl4vV4pnmnUO_gwbksTuCjjLjq&sz=w1000",
+            students: [
+                { name: "劉學旻", x: 22, y: 25.80 },
+                { name: "鄧勇斌", x: 33.80, y: 22.20 },
+                { name: "黃品文", x: 53, y: 22.25 },
+                { name: "王亞婕", x: 65, y: 25.80 },
+                { name: "洪宜靖", x: 80, y: 28 },
+            ] 
+        },
+        {
+            id: "group3", title: "快樂雲端好夥伴三",
+            photoUrl: "https://drive.google.com/thumbnail?id=10ZbIo4qeANzCb3EasagoR7A9iRa0D36g&sz=w1000", 
+            students: [
+                { name: "李光翔", x: 16.60, y: 12.34 },
+                { name: "陳璟萱", x: 50, y: 15 },
+                { name: "殷可盈", x: 62, y: 22.60 },
+                { name: "陳逸軒", x: 78.10, y: 12.21 },
+            ]
+        },
+        {
+            id: "group4", title: "快樂雲端好夥伴四",
+            photoUrl: "https://drive.google.com/thumbnail?id=1ZryLVT7QBdKPD4Gtdd-r7wT_kzB1Br-M&sz=w1000",
+            students: [
+                { name: "高佳煒", x: 15 , y: 26.60 },
+                { name: "謝禮雋", x: 27.50, y: 19.94 },
+                { name: "李旻儒", x: 39.40, y: 16.87 },
+                { name: "胡喬青心", x: 68.20, y: 20.60 },
+                { name: "陳琪雯", x: 82.70, y: 22.20 },
+            ]
+        }
+    ];
+
+
+    // ==========================================
+    // 🚀 SYSTEM CORE LOGIC
+    // ==========================================
+    let serverData = []; 
+
+    window.onload = function() {
+        initMainGrid(); 
+        
+        if (SCRIPT_URL) {
+            fetch(SCRIPT_URL)
+                .then(res => res.json())
+                .then(data => {
+                    serverData = data;
+                    refreshAllTags(); 
+                })
+                .catch(err => {
+                    console.error("Data Stream Error:", err);
+                    document.getElementById('mainStage').innerHTML = '<div style="color:red;text-align:center;">[ERROR] Connection Failed.</div>';
+                });
+        } else {
+            console.log("[MODE] Preview Mode Active");
+            serverData = [{ name: "範例同學A", message: "System check: All systems nominal.", imageUrl: "https://via.placeholder.com/400x300/00f3ff/000000?text=DATA+IMAGE" }];
+            setTimeout(refreshAllTags, 1000);
+        }
+    };
+
+    // 初始化：建立四個組別的面板
+    function initMainGrid() {
+        const stage = document.getElementById('mainStage');
+        stage.innerHTML = ''; 
+
+        GROUPS_CONFIG.forEach(config => {
+            const panel = document.createElement('div');
+            panel.className = 'group-panel';
+            
+            const title = document.createElement('div');
+            title.className = 'group-title';
+            title.innerText = config.title;
+            panel.appendChild(title);
+
+            const photoContainer = document.createElement('div');
+            photoContainer.className = 'photo-container';
+            
+            const img = document.createElement('img');
+            img.src = config.photoUrl || 'https://via.placeholder.com/800x600/0a0a12/00f3ff?text=IMAGE+NOT+FOUND'; 
+            img.className = 'group-photo';
+            photoContainer.appendChild(img);
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'photo-overlay';
+            photoContainer.appendChild(overlay);
+
+            config.students.forEach(student => {
+                const tag = document.createElement('div');
+                tag.className = 'name-tag tag-empty'; 
+                tag.style.left = student.x + '%';
+                tag.style.top = student.y + '%';
+                tag.innerText = student.name;
+                tag.dataset.name = student.name; 
+                tag.onclick = () => openWriteModal(student.name);
+                photoContainer.appendChild(tag);
+            });
+
+            panel.appendChild(photoContainer);
+            stage.appendChild(panel);
+        });
+    }
+
+    // 更新所有標籤狀態
+    function refreshAllTags() {
+        const allTags = document.querySelectorAll('.name-tag');
+        allTags.forEach(tag => {
+            const name = tag.dataset.name;
+            const userData = serverData.find(d => d.name === name);
+
+            if (userData) {
+                tag.className = 'name-tag tag-filled'; // 已寫狀態
+                tag.onclick = () => openViewModal(userData);
+            } else {
+                tag.className = 'name-tag tag-empty'; // 未寫狀態
+                tag.onclick = () => openWriteModal(name);
+            }
+        });
+    }
+
+    // ==========================================
+    // 🖥️ INTERFACE CONTROL (Modals)
+    // ==========================================
+    window.openWriteModal = function(name) {
+        document.getElementById('writeModal').classList.add('show');
+        document.getElementById('writeNameDisplay').innerText = name;
+        document.getElementById('inputName').value = name;
+        document.getElementById('statusMsg').innerText = '';
+        document.getElementById('btnSubmit').disabled = false;
+        document.getElementById('btnSubmit').innerText = 'TRANSMIT DATA';
+        document.getElementById('inputFile').value = ""; 
+    };
+
+    window.submitData = function() {
+        const name = document.getElementById('inputName').value;
+        const msg = document.getElementById('inputMsg').value;
+        const fileInput = document.getElementById('inputFile');
+        const file = fileInput.files[0];
+        const btn = document.getElementById('btnSubmit');
+        const status = document.getElementById('statusMsg');
+
+        if (!name || !msg) { 
+            alert("[ERROR] 請至少填寫名字和祝福內容！"); 
+            return; 
+        }
+
+        btn.disabled = true;
+        btn.innerText = "PROCESSING...";
+        status.innerText = "[STATUS] Uploading data...";
+
+        const sendPayload = (imgData) => {
+            const payload = { name: name, message: msg, image: imgData };
+            
+            if (SCRIPT_URL) {
+                fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+                    .then(() => { alert("[SUCCESS] Data transmission complete."); location.reload(); })
+                    .catch(() => { alert("[SUCCESS] Data transmission complete."); location.reload(); });
+            } else {
+                alert("[MODE] Preview mode. Data logged.");
+                console.log(payload);
+                btn.disabled = false; btn.innerText = "TRANSMIT DATA"; status.innerText = "";
+            }
+        };
+
+        if (file) {
+            const maxWidth = 1000;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width; let height = img.height;
+                    if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+                    canvas.width = width; canvas.height = height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    
+                    status.innerText = "[STATUS] Transmitting payload...";
+                    sendPayload(dataUrl);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            status.innerText = "[STATUS] Transmitting text-only payload...";
+            sendPayload("");
+        }
+    };
+
+    window.openViewModal = function(data) {
+        document.getElementById('viewModal').classList.add('show');
+        // 🚀 修改這裡：如果 imageUrl 為空，就使用預設感謝圖 (DEFAULT_THANK_YOU_IMG)
+        document.getElementById('viewImg').src = data.imageUrl || DEFAULT_THANK_YOU_IMG;
+        document.getElementById('viewMsg').innerText = data.message;
+        document.getElementById('viewAuthor').innerText = "// DATA SOURCE: " + data.name;
+    };
+
+    window.closeModal = function(id) {
+        document.getElementById(id).classList.remove('show');
+    };
+    
+    window.onclick = function(e) {
+        if (e.target.classList.contains('modal')) e.target.classList.remove('show');
+    };
+</script>
+
+</body>
+</html>
